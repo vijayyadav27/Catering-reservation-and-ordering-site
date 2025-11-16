@@ -4,22 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Catering Reservation & Ordering</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
   <header>
     <h1>Catering Reservation & Ordering</h1>
-    <div>
-      <span class="badge" id="uidBadge">Not signed in</span>
-      <nav id="topnav">
-        <a href="#products">Products</a>
-        <a href="#cart">Cart</a>
-        <a href="#orders">My Orders</a>
-      </nav>
+    <nav>
+      <a href="#menu">Menu</a>
+      <a href="#cart">Cart</a>
+      <a href="#orders">My Orders</a>
+    </nav>
+    <div id="authArea" class="auth-area">
+      <!-- Sign up / Login will show here -->
     </div>
   </header>
 
   <main>
+    <!-- AUTH / PROFILE -->
     <section class="card" id="authCard">
       <div id="authForms">
         <div class="row">
@@ -47,44 +49,44 @@
       </div>
     </section>
 
+    <!-- ADMIN UPLOAD -->
     <section class="card hidden" id="adminCard">
       <h3>Admin — Upload product</h3>
-      <div class="row">
-        <div class="col">
-          <label>Title<input id="pTitle"></label>
-          <label>Price<input id="pPrice" type="number"></label>
-          <label>Image URL<input id="pImage"></label>
-          <label>Description<textarea id="pDesc"></textarea></label>
-          <button id="uploadBtn">Upload Product</button>
-        </div>
+      <label>Title<input id="pTitle"></label>
+      <label>Price<input id="pPrice" type="number"></label>
+      <label>Image URL<input id="pImage"></label>
+      <label>Description<textarea id="pDesc"></textarea></label>
+      <button id="uploadBtn">Upload Product</button>
+    </section>
+
+    <!-- MENU -->
+    <section class="card" id="menuSection">
+      <h2 class="section-title">Our Menu</h2>
+      <div class="menu-grid" id="menuGrid">
+        <!-- products loaded here -->
       </div>
     </section>
 
-    <section class="card" id="products">
-      <h3>Products</h3>
-      <div id="productsList" class="row small"></div>
+    <!-- CART -->
+    <section class="card" id="cartSection">
+      <h2 class="section-title">Your Cart</h2>
+      <div class="cart-container" id="cartContainer"></div>
+      <button class="checkout-btn" id="checkoutBtn">Place Order</button>
+      <button class="checkout-btn secondary" id="clearCartBtn" style="margin-top:12px;background:#e5e5e5;color:#111;">Clear Cart</button>
     </section>
 
-    <section class="card" id="cart">
-      <h3>Cart</h3>
-      <div id="cartList" class="small"></div>
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button id="placeOrderBtn">Place Order</button>
-        <button id="clearCartBtn" class="secondary">Clear Cart</button>
-      </div>
+    <!-- ORDERS -->
+    <section class="card" id="ordersSection">
+      <h2 class="section-title">My Orders</h2>
+      <div id="ordersList"></div>
     </section>
-
-    <section class="card" id="orders">
-      <h3>My Orders</h3>
-      <div id="ordersList" class="small"></div>
-    </section>
-
   </main>
 
   <footer>
-    Built simple for the Catering Reservation and Ordering System project.
+    © 2025 Catering Reservation & Ordering
   </footer>
 
-  <script type="module" src="script.js"></script>
+  <!-- Firebase-enabled app script -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
