@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Catering Reservation & Ordering</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Catering Reservation & Ordering</h1>
+    <div>
+      <span class="badge" id="uidBadge">Not signed in</span>
+      <nav id="topnav">
+        <a href="#products">Products</a>
+        <a href="#cart">Cart</a>
+        <a href="#orders">My Orders</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="authCard">
+      <div id="authForms">
+        <div class="row">
+          <div class="col">
+            <h3>Sign up</h3>
+            <label>Email<input id="signupEmail" type="email"></label>
+            <label>Password<input id="signupPass" type="password"></label>
+            <button id="signupBtn">Register</button>
+          </div>
+          <div class="col">
+            <h3>Sign in</h3>
+            <label>Email<input id="loginEmail" type="email"></label>
+            <label>Password<input id="loginPass" type="password"></label>
+            <button id="loginBtn">Login</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="profile" class="hidden">
+        <h3>My Profile</h3>
+        <p class="small">Signed in as <span id="profileEmail"></span></p>
+        <div class="actions">
+          <button id="signoutBtn">Sign out</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card hidden" id="adminCard">
+      <h3>Admin — Upload product</h3>
+      <div class="row">
+        <div class="col">
+          <label>Title<input id="pTitle"></label>
+          <label>Price<input id="pPrice" type="number"></label>
+          <label>Image URL<input id="pImage"></label>
+          <label>Description<textarea id="pDesc"></textarea></label>
+          <button id="uploadBtn">Upload Product</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="products">
+      <h3>Products</h3>
+      <div id="productsList" class="row small"></div>
+    </section>
+
+    <section class="card" id="cart">
+      <h3>Cart</h3>
+      <div id="cartList" class="small"></div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button id="placeOrderBtn">Place Order</button>
+        <button id="clearCartBtn" class="secondary">Clear Cart</button>
+      </div>
+    </section>
+
+    <section class="card" id="orders">
+      <h3>My Orders</h3>
+      <div id="ordersList" class="small"></div>
+    </section>
+
+  </main>
+
+  <footer>
+    Built simple for the Catering Reservation and Ordering System project.
+  </footer>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
