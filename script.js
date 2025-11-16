@@ -1,231 +1,278 @@
-// ---------------- Firebase CONFIG ----------------
-// Replace with your Firebase project values
-export const firebaseConfig = {
+// app.js (use as module)
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  onSnapshot,
+  orderBy
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+/* ========= 1) Put your firebase config here =========
+   Get this from Firebase Console -> Project settings -> SDK config (Web)
+====================================================== */
+const firebaseConfig = {
   apiKey: "REPLACE_ME",
   authDomain: "REPLACE_ME",
   projectId: "REPLACE_ME",
   storageBucket: "REPLACE_ME",
   messagingSenderId: "REPLACE_ME",
   appId: "REPLACE_ME",
-  databaseURL: "REPLACE_ME"
+  // databaseURL optional
 };
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
-
+/* ========== 2) Init Firebase (wrap so app still works without config) ========== */
 let app, auth, db;
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
+  console.log('Firebase initialized');
 } catch (e) {
-  console.warn('Firebase not initialized. Add your config.');
+  console.warn('Firebase not initialized - using fallback only', e);
 }
 
-// ------------- Utility: Logs -----------------
-async function logAction(user, action, meta="") {
-  const entry = { ts: new Date().toISOString(), user, action, meta };
-  console.log('[LOG]', entry);
-  try { if (db) await addDoc(collection(db, 'logs'), entry); } catch (e) {}
-}
+/* ========== 3) DOM refs ========== */
+const menuGrid = document.getElementById('menuGrid');
+const cartContainer = document.getElementById('cartContainer');
+const ordersList = document.getElementById('ordersList');
 
-// ------------- DOM References ----------------
 const signupBtn = document.getElementById('signupBtn');
 const loginBtn = document.getElementById('loginBtn');
 const signoutBtn = document.getElementById('signoutBtn');
-
 const signupEmail = document.getElementById('signupEmail');
 const signupPass = document.getElementById('signupPass');
 const loginEmail = document.getElementById('loginEmail');
 const loginPass = document.getElementById('loginPass');
-
-const uidBadge = document.getElementById('uidBadge');
 const profile = document.getElementById('profile');
 const profileEmail = document.getElementById('profileEmail');
 
 const adminCard = document.getElementById('adminCard');
 const uploadBtn = document.getElementById('uploadBtn');
 
-const productsList = document.getElementById('productsList');
-const cartList = document.getElementById('cartList');
-const ordersList = document.getElementById('ordersList');
-const placeOrderBtn = document.getElementById('placeOrderBtn');
+const checkoutBtn = document.getElementById('checkoutBtn');
 const clearCartBtn = document.getElementById('clearCartBtn');
 
-// ---------------- CART FUNCTIONS ----------------
+/* ========== 4) Fallback sample products (used when Firestore unavailable) ========== */
+const fallbackProducts = [
+  { title: 'Vegetarian Thali', price: 350, image: 'https://via.placeholder.com/400x300', description: 'Traditional thali' },
+  { title: 'Sweets Box', price: 250, image: 'https://via.placeholder.com/400x300', description: 'Assorted sweets' },
+  { title: 'Chicken Biryani', price: 450, image: 'https://via.placeholder.com/400x300', description: 'Fragrant biryani' },
+  { title: 'Paneer Butter Masala', price: 300, image: 'https://via.placeholder.com/400x300', description: 'Creamy paneer gravy' },
+  { title: 'Masala Dosa', price: 180, image: 'https://via.placeholder.com/400x300', description: 'Crispy dosa' },
+  { title: 'Mini Pizza', price: 120, image: 'https://via.placeholder.com/400x300', description: 'Cheesy pizza' }
+];
+
+/* ========== 5) CART (localStorage) ========== */
 function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
 function setCart(c) { localStorage.setItem('cart', JSON.stringify(c)); renderCart(); }
 
 function renderCart() {
-  const c = getCart();
-  if (c.length === 0) {
-    cartList.innerHTML = '<em>Cart is empty</em>';
+  const cart = getCart();
+  cartContainer.innerHTML = '';
+  if (cart.length === 0) {
+    cartContainer.innerHTML = '<p>Your cart is empty.</p>';
     return;
   }
-
-  cartList.innerHTML = c.map((it, idx) => `
-    <div class="product">
-      <img src="${it.image}" />
+  cart.forEach((it, idx) => {
+    const el = document.createElement('div');
+    el.className = 'cart-item';
+    el.innerHTML = `
       <div>
-        <strong>${it.title}</strong>
-        <div class="small">₹${it.price}</div>
-        <div class="actions">
-          <button data-idx="${idx}" class="removeBtn">Remove</button>
-        </div>
+        <strong>${it.title}</strong><div class="small">₹${it.price}</div>
       </div>
-    </div>
-  `).join('');
-
-  document.querySelectorAll('.removeBtn').forEach(btn => btn.onclick = e => {
-    const arr = getCart();
-    arr.splice(Number(e.target.dataset.idx), 1);
-    setCart(arr);
+      <div>
+        <button class="remove-btn" data-idx="${idx}">Remove</button>
+      </div>
+    `;
+    cartContainer.appendChild(el);
+  });
+  cartContainer.querySelectorAll('.remove-btn').forEach(b => {
+    b.onclick = e => {
+      const i = Number(e.target.dataset.idx);
+      const c = getCart();
+      c.splice(i, 1);
+      setCart(c);
+    };
   });
 }
 
-// ---------------- PRODUCTS ----------------
-async function loadProducts() {
-  productsList.innerHTML = '<em>Loading...</em>';
-
-  try {
-    if (!db) throw new Error('no db');
-
-    const snap = await getDocs(collection(db, 'products'));
-    const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    if (arr.length === 0) throw new Error('empty');
-
-    renderProducts(arr);
-  } catch (e) {
-    const fallback = [
-      { title: 'Vegetarian Thali', price: 350, image: 'https://via.placeholder.com/150' },
-      { title: 'Sweets Box', price: 250, image: 'https://via.placeholder.com/150' }
-    ];
-    renderProducts(fallback);
-  }
-}
-
+/* ========== 6) RENDER PRODUCTS ========== */
 function renderProducts(arr) {
-  productsList.innerHTML = arr.map((p, i) => `
-    <div class="product card">
-      <img src="${p.image}" />
-      <div>
-        <strong>${p.title}</strong>
-        <div class="small">₹${p.price}</div>
-        <button class="addBtn" data-i="${i}">Add to cart</button>
-      </div>
-    </div>
-  `).join('');
+  menuGrid.innerHTML = '';
+  arr.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'menu-item';
+    card.innerHTML = `
+      ${p.tag ? `<span class="tag">${p.tag}</span>` : ''}
+      <img src="${p.image || 'https://via.placeholder.com/400x300'}" alt="">
+      <h3>${p.title || p.name}</h3>
+      <p class="small">${p.description || p.desc || ''}</p>
+      <div class="price">₹${p.price}</div>
+      <button class="add-btn">Add to Cart</button>
+    `;
+    menuGrid.appendChild(card);
 
-  document.querySelectorAll('.addBtn').forEach(btn => btn.onclick = e => {
-    const p = arr[Number(e.target.dataset.i)];
-    const c = getCart();
-    c.push(p);
-    setCart(c);
+    card.querySelector('.add-btn').onclick = () => {
+      const cart = getCart();
+      cart.push({ title: p.title || p.name, price: p.price, image: p.image });
+      setCart(cart);
+      alert(`${p.title || p.name} added to cart`);
+    };
   });
 }
 
-// ---------------- ORDERS ----------------
-async function placeOrder() {
-  const cart = getCart();
-  if (cart.length === 0) return alert('Cart empty');
-
-  const order = {
-    items: cart,
-    created: new Date().toISOString(),
-    user: currentUserEmail()
-  };
+/* ========== 7) LOAD PRODUCTS FROM FIRESTORE (real-time if available) ========== */
+async function loadProductsFromFirestore() {
+  if (!db) return renderProducts(fallbackProducts);
 
   try {
-    if (!db) throw new Error('no db');
-    await addDoc(collection(db, 'orders'), order);
-    setCart([]);
-    alert('Order placed');
+    const productsCol = collection(db, 'products');
+    // realtime updates
+    onSnapshot(productsCol, snap => {
+      const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (arr.length === 0) renderProducts(fallbackProducts);
+      else renderProducts(arr);
+    }, err => {
+      console.warn('products snapshot err', err);
+      renderProducts(fallbackProducts);
+    });
   } catch (e) {
-    alert('Unable to place order (No Firebase?)');
+    console.warn('loadProducts error', e);
+    renderProducts(fallbackProducts);
   }
 }
 
-async function loadMyOrders() {
-  try {
-    if (!db) throw new Error('no db');
-    const q = query(collection(db, 'orders'), where('user', '==', currentUserEmail()));
-    const snap = await getDocs(q);
-    const arr = snap.docs.map(d => d.data());
-
-    if (arr.length === 0) ordersList.innerHTML = '<em>No orders yet</em>';
-    else ordersList.innerHTML = arr.map(o => `
-      <div class="card">
-        <strong>Order</strong>
-        <div class="small">${o.created}</div>
-        <div class="small">Items: ${o.items.map(i => i.title).join(', ')}</div>
-      </div>
-    `).join('');
-
-  } catch (e) {
-    ordersList.innerHTML = '<em>Unable to load (No Firebase)</em>';
-  }
-}
-
-// ---------------- ADMIN UPLOAD ----------------
-uploadBtn.onclick = async () => {
-  const title = document.getElementById('pTitle').value;
-  const price = Number(document.getElementById('pPrice').value);
-  const image = document.getElementById('pImage').value;
-  const description = document.getElementById('pDesc').value;
-
-  try {
-    await addDoc(collection(db, 'products'), { title, price, image, description });
-    alert('Uploaded');
-    loadProducts();
-  } catch (e) {
-    alert('Upload failed');
-  }
+/* ========== 8) AUTH: signup / login / signout ========== */
+if (signupBtn) signupBtn.onclick = () => {
+  const e = signupEmail.value.trim(), pw = signupPass.value;
+  if (!e || !pw) return alert('email & password required');
+  createUserWithEmailAndPassword(auth, e, pw)
+    .then(userCred => {
+      alert('Registered and logged in');
+    }).catch(err => alert('Register: ' + err.message));
 };
 
-// ---------------- AUTH ----------------
-signupBtn.onclick = () => {
-  createUserWithEmailAndPassword(auth, signupEmail.value, signupPass.value)
-    .then(() => alert('Registered'))
-    .catch(e => alert(e.message));
+if (loginBtn) loginBtn.onclick = () => {
+  const e = loginEmail.value.trim(), pw = loginPass.value;
+  if (!e || !pw) return alert('email & password required');
+  signInWithEmailAndPassword(auth, e, pw)
+    .catch(err => alert('Login: ' + err.message));
 };
 
-loginBtn.onclick = () => {
-  signInWithEmailAndPassword(auth, loginEmail.value, loginPass.value)
-    .catch(e => alert(e.message));
-};
+if (signoutBtn) signoutBtn.onclick = () => signOut(auth).catch(e => console.warn(e));
 
-signoutBtn.onclick = () => signOut(auth);
-
-function currentUserEmail() {
-  return auth?.currentUser?.email || 'anonymous';
-}
-
-// ---------------- AUTH STATE ----------------
+/* ========== 9) onAuthStateChanged: show/hide admin & load orders ========== */
 onAuthStateChanged(auth, user => {
   if (user) {
-    uidBadge.textContent = user.email;
     profile.classList.remove('hidden');
     document.getElementById('authForms').classList.add('hidden');
     profileEmail.textContent = user.email;
-
-    if (user.email.includes('admin')) adminCard.classList.remove('hidden');
-
-    loadProducts();
-    loadMyOrders();
+    // simple admin detection (improve by using custom claims)
+    if (user.email && (user.email.includes('admin') || user.email === 'admin@example.com')) {
+      adminCard.classList.remove('hidden');
+    } else {
+      adminCard.classList.add('hidden');
+    }
+    loadMyOrders(user.email);
   } else {
-    uidBadge.textContent = 'Not signed in';
     profile.classList.add('hidden');
     document.getElementById('authForms').classList.remove('hidden');
     adminCard.classList.add('hidden');
-
-    loadProducts();
+    ordersList.innerHTML = '<p>Sign in to see orders</p>';
   }
 });
 
-// ---------------- INITIAL LOAD ----------------
+/* ========== 10) UPLOAD PRODUCT (admin) ========== */
+if (uploadBtn) uploadBtn.onclick = async () => {
+  const title = document.getElementById('pTitle').value.trim();
+  const price = Number(document.getElementById('pPrice').value);
+  const image = document.getElementById('pImage').value.trim();
+  const description = document.getElementById('pDesc').value.trim();
+
+  if (!title || !price) return alert('Title & price required');
+
+  if (!db) return alert('No Firebase configured');
+
+  try {
+    await addDoc(collection(db, 'products'), { title, price, image, description, created: new Date().toISOString() });
+    alert('Product uploaded');
+    // inputs cleared
+    document.getElementById('pTitle').value = '';
+    document.getElementById('pPrice').value = '';
+    document.getElementById('pImage').value = '';
+    document.getElementById('pDesc').value = '';
+  } catch (e) {
+    console.error(e);
+    alert('Upload failed: ' + e.message);
+  }
+};
+
+/* ========== 11) PLACE ORDER (write to Firestore orders) ========== */
+if (checkoutBtn) checkoutBtn.onclick = async () => {
+  const cart = getCart();
+  if (cart.length === 0) return alert('Cart is empty');
+  const order = { items: cart, created: new Date().toISOString(), user: auth?.currentUser?.email || 'guest' };
+
+  try {
+    if (!db) throw new Error('No Firebase configured');
+    await addDoc(collection(db, 'orders'), order);
+    alert('Order placed — saved to Firestore');
+    setCart([]);
+  } catch (e) {
+    console.warn(e);
+    // fallback: store locally
+    const fallbackOrders = JSON.parse(localStorage.getItem('localOrders') || '[]');
+    fallbackOrders.push(order);
+    localStorage.setItem('localOrders', JSON.stringify(fallbackOrders));
+    alert('Order stored locally (Firestore unavailable)');
+    setCart([]);
+  }
+};
+
+/* ========== 12) LOAD MY ORDERS ========== */
+async function loadMyOrders(email) {
+  ordersList.innerHTML = '';
+  if (!db) {
+    // fallback: show local orders (if any)
+    const localOrders = JSON.parse(localStorage.getItem('localOrders') || '[]').filter(o => o.user === (email || 'guest'));
+    if (localOrders.length === 0) { ordersList.innerHTML = '<p>No orders (no Firebase)</p>'; return; }
+    localOrders.forEach(o => {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `<strong>Order</strong><div class="small">${o.created}</div><div class="small">Items: ${o.items.map(i => i.title).join(', ')}</div>`;
+      ordersList.appendChild(el);
+    });
+    return;
+  }
+
+  try {
+    const q = query(collection(db, 'orders'), where('user', '==', email || 'guest'), orderBy('created', 'desc'));
+    const snap = await getDocs(q);
+    if (snap.empty) { ordersList.innerHTML = '<p>No orders yet</p>'; return; }
+    snap.forEach(docSnap => {
+      const o = docSnap.data();
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `<strong>Order</strong><div class="small">${o.created}</div><div class="small">Items: ${o.items.map(i => i.title).join(', ')}</div>`;
+      ordersList.appendChild(el);
+    });
+  } catch (e) {
+    console.warn('loadMyOrders err', e);
+    ordersList.innerHTML = '<p>Could not load orders</p>';
+  }
+}
+
+/* ========== 13) INIT ========== */
 renderCart();
-loadProducts();
-placeOrderBtn.onclick = placeOrder;
-clearCartBtn.onclick = () => setCart([]);
+loadProductsFromFirestore();
