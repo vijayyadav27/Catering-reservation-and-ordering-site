@@ -1,0 +1,21 @@
+:root{--accent:#2b8a9b;--muted:#666}
+body{font-family:Inter,system-ui,Segoe UI,Arial;margin:0;background:#f7f9fb;color:#111}
+header{background:linear-gradient(90deg,#fff 0,#e9fbff 100%);padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:18px}
+main{max-width:980px;margin:18px auto;padding:18px}
+.card{background:#fff;padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(20,30,50,0.06);margin-bottom:12px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.col{flex:1;min-width:260px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+input,button,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e0e6ee}
+button{background:var(--accent);color:#fff;border:0;padding:10px 12px;cursor:pointer}
+button.secondary{background:#ddd;color:#000}
+.product{display:flex;gap:12px;align-items:center}
+.product img{width:90px;height:70px;object-fit:cover;border-radius:8px}
+.small{font-size:13px;color:var(--muted)}
+nav a{margin-left:10px;color:var(--accent);text-decoration:none}
+.actions{display:flex;gap:8px}
+.badge{background:#eef9fb;padding:4px 8px;border-radius:8px;font-size:12px;color:var(--accent)}
+.hidden{display:none}
+footer{max-width:980px;margin:12px auto;color:var(--muted);text-align:center}
+@media (max-width:600px){header{flex-direction:column;align-items:flex-start}}
